@@ -1,0 +1,142 @@
+project:
+  name: "mlops-churn-prediction"
+  version: "1.0.0"
+  description: "Customer Churn Prediction MLOps Pipeline"
+
+data:
+  raw_path: "data/raw"
+  processed_path: "data/processed"
+  features_path: "data/features"
+  external_path: "data/external"
+  
+  # Data validation rules
+  validation:
+    max_missing_percentage: 0.1
+    min_rows: 1000
+    required_columns:
+      - customer_id
+      - tenure
+      - monthly_charges
+      - total_charges
+      - churn
+
+preprocessing:
+  # Feature engineering parameters
+  categorical_encoding: "target"
+  numerical_scaling: "standard"
+  handle_missing: "median"
+  
+  # Feature selection
+  feature_selection:
+    method: "mutual_info"
+    k_best: 20
+  
+  # Train/validation/test split
+  train_size: 0.7
+  val_size: 0.15
+  test_size: 0.15
+  random_state: 42
+
+model:
+  # Model parameters
+  algorithm: "random_forest"
+  hyperparameters:
+    n_estimators: 100
+    max_depth: 10
+    min_samples_split: 5
+    min_samples_leaf: 2
+    random_state: 42
+  
+  # Cross-validation
+  cv_folds: 5
+  
+  # Model evaluation metrics
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - roc_auc
+  
+  # Model registry
+  registry:
+    stage: "staging"
+    tags:
+      - churn_prediction
+      - random_forest
+
+training:
+  # Experiment tracking
+  experiment_name: "churn_prediction"
+  run_name: "rf_baseline"
+  
+  # Hyperparameter tuning
+  hyperparameter_tuning:
+    enabled: true
+    method: "optuna"
+    n_trials: 50
+    timeout: 3600
+  
+  # Early stopping
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 0.001
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  timeout: 30
+  
+  # Rate limiting
+  rate_limit:
+    requests_per_minute: 100
+  
+  # Model serving
+  model_version: "latest"
+  batch_size: 32
+
+monitoring:
+  # Performance monitoring
+  performance:
+    enabled: true
+    metrics_interval: 300  # seconds
+    alert_threshold: 0.05  # 5% degradation
+  
+  # Data drift detection
+  drift_detection:
+    enabled: true
+    reference_window: 30  # days
+    detection_window: 7   # days
+    threshold: 0.1
+  
+  # Model drift detection
+  model_drift:
+    enabled: true
+    threshold: 0.05
+    window_size: 1000
+  
+  # Alerting
+  alerts:
+    enabled: true
+    channels:
+      - email
+      - slack
+    thresholds:
+      accuracy_drop: 0.05
+      data_drift: 0.1
+      error_rate: 0.01
+
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/mlops.log"
+  max_size: "10MB"
+  backup_count: 5
+
+database:
+  url: "sqlite:///./mlops.db"
+  echo: false
+  pool_size: 5
+  max_overflow: 10

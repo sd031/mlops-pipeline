@@ -1,0 +1,100 @@
+models:
+  random_forest:
+    class: "sklearn.ensemble.RandomForestClassifier"
+    hyperparameters:
+      n_estimators: [50, 100, 200]
+      max_depth: [5, 10, 15, null]
+      min_samples_split: [2, 5, 10]
+      min_samples_leaf: [1, 2, 4]
+      max_features: ["sqrt", "log2", null]
+      bootstrap: [true, false]
+    
+  gradient_boosting:
+    class: "sklearn.ensemble.GradientBoostingClassifier"
+    hyperparameters:
+      n_estimators: [50, 100, 200]
+      learning_rate: [0.01, 0.1, 0.2]
+      max_depth: [3, 5, 7]
+      min_samples_split: [2, 5, 10]
+      min_samples_leaf: [1, 2, 4]
+      subsample: [0.8, 0.9, 1.0]
+  
+  logistic_regression:
+    class: "sklearn.linear_model.LogisticRegression"
+    hyperparameters:
+      C: [0.1, 1.0, 10.0]
+      penalty: ["l1", "l2", "elasticnet"]
+      solver: ["liblinear", "saga"]
+      max_iter: [1000, 2000]
+  
+  xgboost:
+    class: "xgboost.XGBClassifier"
+    hyperparameters:
+      n_estimators: [50, 100, 200]
+      learning_rate: [0.01, 0.1, 0.2]
+      max_depth: [3, 5, 7]
+      min_child_weight: [1, 3, 5]
+      gamma: [0, 0.1, 0.2]
+      subsample: [0.8, 0.9, 1.0]
+      colsample_bytree: [0.8, 0.9, 1.0]
+
+hyperparameter_tuning:
+  method: "optuna"
+  n_trials: 100
+  timeout: 7200  # 2 hours
+  
+  optimization:
+    direction: "maximize"
+    metric: "roc_auc"
+  
+  pruning:
+    enabled: true
+    patience: 10
+
+evaluation:
+  metrics:
+    classification:
+      - accuracy
+      - precision
+      - recall
+      - f1_score
+      - roc_auc
+      - log_loss
+      - matthews_corrcoef
+    
+    threshold_metrics:
+      - precision_recall_curve
+      - roc_curve
+      - confusion_matrix
+  
+  cross_validation:
+    method: "stratified_kfold"
+    n_splits: 5
+    shuffle: true
+    random_state: 42
+  
+  test_size: 0.2
+  validation_size: 0.2
+
+feature_importance:
+  methods:
+    - "permutation"
+    - "shap"
+    - "feature_importance_"
+  
+  top_k: 20
+
+model_selection:
+  criteria:
+    primary_metric: "roc_auc"
+    minimum_threshold: 0.75
+    
+  ensemble:
+    enabled: true
+    methods:
+      - "voting"
+      - "stacking"
+    
+  final_model:
+    retrain_on_full_data: true
+    save_artifacts: true

@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # MLflow Tracking Server
+  mlflow:
+    image: python:3.9-slim
+    container_name: mlflow-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models/artifacts:/mlflow/artifacts
+      - ./models/experiments:/mlflow/experiments
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow/experiments/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    command: >
+      bash -c "
+        pip install mlflow[extras] &&
+        mkdir -p /mlflow/experiments /mlflow/artifacts &&
+        mlflow server 
+        --backend-store-uri sqlite:///mlflow/experiments/mlflow.db 
+        --default-artifact-root /mlflow/artifacts 
+        --host 0.0.0.0 
+        --port 5000
+      "
+    networks:
+      - mlops-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:13
+    container_name: mlops-postgres
+    environment:
+      - POSTGRES_DB=mlops
+      - POSTGRES_USER=mlops_user
+      - POSTGRES_PASSWORD=mlops_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    networks:
+      - mlops-network
+
+  # Model API Service
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: mlops-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://mlops_user:mlops_password@postgres:5432/mlops
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - mlflow
+    networks:
+      - mlops-network
+
+  # Training Service
+  training:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.training
+    container_name: mlops-training
+    environment:
+      - DATABASE_URL=postgresql://mlops_user:mlops_password@postgres:5432/mlops
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    depends_on:
+      - postgres
+      - mlflow
+    networks:
+      - mlops-network
+
+  # Monitoring Service
+  monitoring:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.monitoring
+    container_name: mlops-monitoring
+    environment:
+      - DATABASE_URL=postgresql://mlops_user:mlops_password@postgres:5432/mlops
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./metrics:/app/metrics
+    depends_on:
+      - postgres
+      - api
+    networks:
+      - mlops-network
+
+  # Prometheus for Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mlops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - mlops-network
+
+  # Grafana for Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mlops-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - mlops-network
+
+  # Redis for Caching
+  redis:
+    image: redis:alpine
+    container_name: mlops-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mlops-network
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  redis_data:
+
+networks:
+  mlops-network:
+    driver: bridge
