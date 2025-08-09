@@ -99,6 +99,16 @@ jobs:
         mkdir -p data/processed
         cp data/raw/customer_churn.csv data/processed/validated_data.csv
     
+    - name: Initialize database
+      run: |
+        # Create database tables if they don't exist
+        python -c "
+        from src.utils.database import DatabaseManager
+        db = DatabaseManager()
+        db.create_tables()
+        print('Database tables initialized')
+        "
+    
     - name: Train model
       run: make train-model
     
