@@ -102,7 +102,7 @@ jobs:
     - name: Initialize database
       run: |
         # Create database tables if they don't exist
-        python -c "
+        ./venv/bin/python -c "
         from src.utils.database import DatabaseManager
         db = DatabaseManager()
         db.create_tables()
