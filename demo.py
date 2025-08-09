@@ -89,7 +89,7 @@ def run_demo():
         print("   python -m src.api.app")
         print("   # Then visit http://localhost:8000/docs for API documentation")
         print("\n🐳 To start all services with Docker:")
-        print("   docker-compose up -d")
+        print("   docker compose up -d")
         print("   # This will start MLflow, PostgreSQL, API, and monitoring services")
         
         print_banner("Demo Completed Successfully! 🎉")

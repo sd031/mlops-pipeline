@@ -93,16 +93,16 @@ run-pipeline: generate-data
 
 # Docker operations
 docker-build:
-	docker-compose build
+	docker compose build
 
 docker-up:
-	docker-compose up -d
+	docker compose up -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # Monitoring
 monitor:
