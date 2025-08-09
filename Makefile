@@ -75,6 +75,7 @@ clean-venv:
 clean-all: clean clean-venv
 
 # ML Pipeline
+
 generate-data:
 	$(PYTHON) scripts/generate_data.py
 
@@ -85,7 +86,7 @@ evaluate-model:
 	$(PYTHON) -m src.models.evaluate
 
 serve-model:
-	$(PYTHON) -m uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
+	$(PYTHON) -m uvicorn src.api.app:app --host 0.0.0.0 --port 8001 --reload
 
 run-pipeline: generate-data
 	$(PYTHON) scripts/run_pipeline.py
@@ -114,6 +115,10 @@ jupyter:
 
 mlflow-ui:
 	$(PYTHON) -m mlflow ui --host 0.0.0.0 --port 5001
+
+mlflow-server:
+	@echo "Starting local MLflow tracking server..."
+	$(PYTHON) -m mlflow server --backend-store-uri ./mlruns --default-artifact-root ./mlruns --host 0.0.0.0 --port 5001
 
 # Database operations
 db-init:
