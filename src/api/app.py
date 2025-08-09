@@ -8,10 +8,11 @@ from datetime import datetime
 from typing import List, Dict, Any
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 import uvicorn
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from src.api.schemas import (
     PredictionRequest, BatchPredictionRequest, PredictionResponse, 
@@ -46,11 +47,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prometheus metrics middleware
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    """Middleware to collect Prometheus metrics for HTTP requests."""
+    start_time = time.time()
+    
+    response = await call_next(request)
+    
+    # Record metrics
+    duration = time.time() - start_time
+    method = request.method
+    endpoint = request.url.path
+    status_code = str(response.status_code)
+    
+    # Update counters and histograms
+    http_requests_total.labels(method=method, endpoint=endpoint, status_code=status_code).inc()
+    http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+    
+    return response
+
 # Global variables
 config = None
 model_predictor = None
 performance_monitor = None
 drift_detector = None
+
+# Prometheus metrics
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total number of HTTP requests',
+    ['method', 'endpoint', 'status_code']
+)
+
+model_predictions_total = Counter(
+    'model_predictions_total',
+    'Total number of model predictions made',
+    ['model_version', 'prediction_type']
+)
+
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint']
+)
 
 
 @app.on_event("startup")
@@ -157,6 +197,15 @@ async def predict(request: PredictionRequest, background_tasks: BackgroundTasks)
         # Make prediction
         prediction, probability = model_predictor.predict(input_data)
         
+        # Update Prometheus metrics
+        model_predictions_total.labels(
+            model_version=model_predictor.model_version,
+            prediction_type="single"
+        ).inc()
+        
+        # Calculate latency
+        latency = time.time() - start_time
+        
         # Create response
         response = PredictionResponse(
             customer_id=request.customer_id,
@@ -166,14 +215,14 @@ async def predict(request: PredictionRequest, background_tasks: BackgroundTasks)
             timestamp=datetime.now()
         )
         
-        # Log prediction in background
+        # Log prediction asynchronously
         background_tasks.add_task(
             log_prediction,
             request.customer_id,
-            input_data.to_json(),
+            str(request.dict()),
             response.prediction,
             response.probability,
-            time.time() - start_time
+            latency
         )
         
         return response
@@ -212,6 +261,12 @@ async def predict_batch(request: BatchPredictionRequest, background_tasks: Backg
         
         processing_time = time.time() - start_time
         
+        # Update Prometheus metrics for batch predictions
+        model_predictions_total.labels(
+            model_version=model_predictor.model_version,
+            prediction_type="batch"
+        ).inc(len(request.predictions))
+        
         # Log batch prediction in background
         background_tasks.add_task(
             log_batch_prediction,
@@ -246,8 +301,8 @@ async def get_model_info():
         raise HTTPException(status_code=500, detail=f"Failed to get model info: {str(e)}")
 
 
-@app.get("/metrics", response_model=MetricsResponse)
-async def get_metrics(period: str = "24h"):
+@app.get("/metrics/performance", response_model=MetricsResponse)
+async def get_performance_metrics(period: str = "24h"):
     """Get model performance metrics."""
     try:
         if not performance_monitor:
@@ -265,6 +320,12 @@ async def get_metrics(period: str = "24h"):
     except Exception as e:
         logger.error(f"Failed to get metrics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+
+
+@app.get("/metrics")
+async def get_prometheus_metrics():
+    """Prometheus metrics endpoint."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/drift", response_model=DriftResponse)
