@@ -9,7 +9,7 @@ on:
       force_retrain:
         description: 'Force model retraining'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 jobs:
@@ -88,7 +88,7 @@ jobs:
         python -m src.models.evaluate
     
     - name: Upload retrained model artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: retrained-model-${{ github.run_number }}
         path: |
