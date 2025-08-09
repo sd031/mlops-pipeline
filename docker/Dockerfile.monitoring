@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY config/ ./config/
 COPY setup.py .
+COPY README.md .
 
 # Install the package
 RUN pip install -e .
