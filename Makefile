@@ -113,7 +113,7 @@ jupyter:
 	$(PYTHON) -m jupyter notebook notebooks/
 
 mlflow-ui:
-	$(PYTHON) -m mlflow ui --host 0.0.0.0 --port 5000
+	$(PYTHON) -m mlflow ui --host 0.0.0.0 --port 5001
 
 # Database operations
 db-init:

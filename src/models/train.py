@@ -40,8 +40,8 @@ class ModelTrainer:
         self.model_config = config.get('model', {})
         self.training_config = config.get('training', {})
         
-        # Set up MLflow
-        mlflow_uri = os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5000')
+        # Setup MLflow - use file-based tracking for local development
+        mlflow_uri = os.getenv('MLFLOW_TRACKING_URI', './mlruns')
         mlflow.set_tracking_uri(mlflow_uri)
         
         experiment_name = self.training_config.get('experiment_name', 'churn_prediction')
