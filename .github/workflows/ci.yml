@@ -105,7 +105,7 @@ jobs:
         ./venv/bin/python -c "
         from src.utils.database import DatabaseManager
         db = DatabaseManager()
-        db.create_tables()
+        db.init_db()
         print('Database tables initialized')
         "
     
