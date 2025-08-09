@@ -1,8 +1,15 @@
-.PHONY: help install setup test lint format clean run-pipeline docker-build docker-up docker-down
+.PHONY: help venv install setup test lint format clean run-pipeline docker-build docker-up docker-down
+
+# Virtual environment settings
+VENV_NAME = venv
+VENV_PATH = ./$(VENV_NAME)
+PYTHON = $(VENV_PATH)/bin/python
+PIP = $(VENV_PATH)/bin/pip
 
 # Default target
 help:
 	@echo "Available commands:"
+	@echo "  venv             Create virtual environment"
 	@echo "  install          Install dependencies"
 	@echo "  setup            Setup project environment"
 	@echo "  test             Run tests"
@@ -18,12 +25,18 @@ help:
 	@echo "  serve-model      Serve model API"
 	@echo "  monitor          Start monitoring"
 
+# Virtual environment creation
+venv:
+	python3 -m venv $(VENV_NAME)
+	$(PIP) install --upgrade pip
+	@echo "Virtual environment created. Activate with: source $(VENV_NAME)/bin/activate"
+
 # Installation and setup
-install:
-	pip install -r requirements.txt
+install: venv
+	$(PIP) install -r requirements.txt
 
 setup: install
-	python -m pip install -e .
+	$(PYTHON) -m pip install -e .
 	mkdir -p data/raw data/processed data/features data/external
 	mkdir -p models/artifacts models/experiments models/registry
 	mkdir -p logs metrics
@@ -31,22 +44,22 @@ setup: install
 
 # Testing
 test:
-	pytest tests/ -v --cov=src --cov-report=html
+	$(PYTHON) -m pytest tests/ -v --cov=src --cov-report=html
 
 test-unit:
-	pytest tests/unit/ -v
+	$(PYTHON) -m pytest tests/unit/ -v
 
 test-integration:
-	pytest tests/integration/ -v
+	$(PYTHON) -m pytest tests/integration/ -v
 
 # Code quality
 lint:
-	flake8 src/ tests/
-	black --check src/ tests/
+	$(PYTHON) -m flake8 src/ tests/
+	$(PYTHON) -m black --check src/ tests/
 
 format:
-	black src/ tests/
-	isort src/ tests/
+	$(PYTHON) -m black src/ tests/
+	$(PYTHON) -m isort src/ tests/
 
 # Cleanup
 clean:
@@ -56,21 +69,26 @@ clean:
 	rm -rf htmlcov
 	rm -rf .coverage
 
+clean-venv:
+	rm -rf $(VENV_NAME)
+
+clean-all: clean clean-venv
+
 # ML Pipeline
 generate-data:
-	python scripts/generate_data.py
+	$(PYTHON) scripts/generate_data.py
 
 train-model:
-	python -m src.models.train --config config/model_config.yaml
+	$(PYTHON) -m src.models.train --config config/model_config.yaml
 
 evaluate-model:
-	python -m src.models.evaluate
+	$(PYTHON) -m src.models.evaluate
 
 serve-model:
-	uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
+	$(PYTHON) -m uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
 
 run-pipeline: generate-data
-	python scripts/run_pipeline.py
+	$(PYTHON) scripts/run_pipeline.py
 
 # Docker operations
 docker-build:
@@ -87,19 +105,19 @@ docker-logs:
 
 # Monitoring
 monitor:
-	python -m src.monitoring.performance &
-	python -m src.monitoring.drift &
+	$(PYTHON) -m src.monitoring.performance &
+	$(PYTHON) -m src.monitoring.drift &
 
 # Development
 jupyter:
-	jupyter notebook notebooks/
+	$(PYTHON) -m jupyter notebook notebooks/
 
 mlflow-ui:
-	mlflow ui --host 0.0.0.0 --port 5000
+	$(PYTHON) -m mlflow ui --host 0.0.0.0 --port 5000
 
 # Database operations
 db-init:
-	python -c "from src.utils.database import init_db; init_db()"
+	$(PYTHON) -c "from src.utils.database import init_db; init_db()"
 
 db-migrate:
-	python -c "from src.utils.database import migrate_db; migrate_db()"
+	$(PYTHON) -c "from src.utils.database import migrate_db; migrate_db()"
