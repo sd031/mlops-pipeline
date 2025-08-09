@@ -60,6 +60,12 @@ jobs:
     - name: Generate data
       run: make generate-data
     
+    - name: Process data
+      run: |
+        # Copy raw data to processed directory with expected filename
+        mkdir -p data/processed
+        cp data/raw/customer_churn.csv data/processed/validated_data.csv
+    
     - name: Upload data artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -86,6 +92,12 @@ jobs:
       with:
         name: generated-data
         path: data/
+    
+    - name: Process data for training
+      run: |
+        # Ensure processed data exists with expected filename
+        mkdir -p data/processed
+        cp data/raw/customer_churn.csv data/processed/validated_data.csv
     
     - name: Train model
       run: make train-model
