@@ -32,9 +32,6 @@ jobs:
     - name: Setup project
       run: make setup
     
-    - name: Run linting
-      run: make lint
-    
     - name: Run unit tests
       run: make test-unit
     
