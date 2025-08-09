@@ -34,7 +34,7 @@ jobs:
     
     - name: Build and push Docker images
       run: |
-        docker compose build
+        make docker-build
         docker tag mlops_project-api ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:staging
         docker tag mlops_project-training ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-training:staging
         docker tag mlops_project-monitoring ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-monitoring:staging
@@ -73,7 +73,7 @@ jobs:
     
     - name: Build and push production images
       run: |
-        docker compose build
+        make docker-build
         docker tag mlops_project-api ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ steps.version.outputs.VERSION }}
         docker tag mlops_project-training ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-training:${{ steps.version.outputs.VERSION }}
         docker tag mlops_project-monitoring ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-monitoring:${{ steps.version.outputs.VERSION }}
