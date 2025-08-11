@@ -35,7 +35,7 @@ venv:
 install: venv
 	$(PIP) install -r requirements.txt
 
-setup: install
+set-up: install
 	$(PYTHON) -m pip install -e .
 	mkdir -p data/raw data/processed data/features data/external
 	mkdir -p models/artifacts models/experiments models/registry
